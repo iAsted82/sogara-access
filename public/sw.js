@@ -377,10 +377,104 @@ async function performBackgroundSync() {
   }
 }
 
-// Fonctions utilitaires pour la synchronisation
+/**
+ * Configuration IndexedDB pour le stockage des données en attente
+ */
+const DB_NAME = 'sogara-sync-pending-data';
+const DB_VERSION = 1;
+const STORE_NAME = 'pending-requests';
+
+/**
+ * Initialisation de la base de données IndexedDB
+ * @returns Promise<IDBDatabase>
+ */
+async function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onerror = () => {
+      console.error('[SW] Erreur ouverture IndexedDB:', request.error);
+      reject(request.error);
+    };
+    
+    request.onsuccess = () => {
+      console.log('[SW] IndexedDB ouvert avec succès');
+      resolve(request.result);
+    };
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      console.log('[SW] Mise à niveau IndexedDB...');
+      
+      // Créer le store si il n'existe pas
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { 
+          keyPath: 'id',
+          autoIncrement: true 
+        });
+        
+        // Créer des index pour faciliter les requêtes
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+        store.createIndex('type', 'type', { unique: false });
+        store.createIndex('status', 'status', { unique: false });
+        store.createIndex('retryCount', 'retryCount', { unique: false });
+        
+        console.log('[SW] Store IndexedDB créé avec succès');
+      }
+    };
+  });
+}
+
+/**
+ * ✅ FONCTION COMPLÈTE : Récupérer toutes les données en attente de synchronisation
+ * @returns Promise<Array> - Tableau des données en attente
+ */
 async function getStoredPendingData() {
-  // Récupérer les données stockées localement en attente de synchronisation
-  return [];
+  try {
+    const db = await initDB();
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      
+      request.onsuccess = () => {
+        const pendingData = request.result || [];
+        console.log('[SW] Données en attente récupérées:', pendingData.length);
+        
+        // Filtrer les données non expirées et triées par priorité
+        const validData = pendingData
+          .filter(data => {
+            // Garder les données créées il y a moins de 7 jours
+            const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 jours en ms
+            return (Date.now() - data.timestamp) < maxAge;
+          })
+          .sort((a, b) => {
+            // Prioriser par type, puis par ancienneté
+            if (a.type === 'visitor_data' && b.type !== 'visitor_data') return -1;
+            if (b.type === 'visitor_data' && a.type !== 'visitor_data') return 1;
+            return a.timestamp - b.timestamp;
+          });
+        
+        resolve(validData);
+      };
+      
+      request.onerror = () => {
+        console.error('[SW] Erreur lors de la récupération des données:', request.error);
+        reject(request.error);
+      };
+    });
+  } catch (error) {
+    console.error('[SW] Erreur initDB dans getStoredPendingData:', error);
+    // Fallback vers localStorage en cas d'erreur IndexedDB
+    try {
+      const fallbackData = localStorage.getItem('sogara-pending-sync');
+      return fallbackData ? JSON.parse(fallbackData) : [];
+    } catch (fallbackError) {
+      console.error('[SW] Erreur fallback localStorage:', fallbackError);
+      return [];
+    }
+  }
 }
 
 async function syncDataWithServer(data) {
@@ -398,9 +492,201 @@ async function syncDataWithServer(data) {
   return response.json();
 }
 
+/**
+ * ✅ FONCTION COMPLÈTE : Supprimer une donnée spécifique après synchronisation réussie
+ * @param {string|number} dataId - ID de la donnée à supprimer
+ * @returns Promise<boolean> - True si suppression réussie
+ */
 async function removePendingData(dataId) {
-  // Supprimer les données synchronisées du stockage local
-  console.log('[SW] Data synced and removed:', dataId);
+  try {
+    const db = await initDB();
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    return new Promise((resolve, reject) => {
+      const request = store.delete(dataId);
+      
+      request.onsuccess = () => {
+        console.log('[SW] Donnée synchronisée et supprimée avec succès:', dataId);
+        resolve(true);
+      };
+      
+      request.onerror = () => {
+        console.error('[SW] Erreur lors de la suppression des données:', request.error);
+        reject(request.error);
+      };
+    });
+  } catch (error) {
+    console.error('[SW] Erreur initDB dans removePendingData:', error);
+    // Fallback vers localStorage
+    try {
+      const fallbackData = localStorage.getItem('sogara-pending-sync');
+      if (fallbackData) {
+        const data = JSON.parse(fallbackData);
+        const filteredData = data.filter(item => item.id !== dataId);
+        localStorage.setItem('sogara-pending-sync', JSON.stringify(filteredData));
+        console.log('[SW] Donnée supprimée via fallback localStorage:', dataId);
+        return true;
+      }
+      return false;
+    } catch (fallbackError) {
+      console.error('[SW] Erreur fallback localStorage dans removePendingData:', fallbackError);
+      return false;
+    }
+  }
+}
+
+/**
+ * ✅ FONCTION ADDITIONNELLE : Ajouter des données en attente de synchronisation
+ * @param {Object} data - Données à stocker
+ * @returns Promise<number> - ID de la donnée stockée
+ */
+async function addPendingData(data) {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    const pendingData = {
+      ...data,
+      timestamp: Date.now(),
+      status: 'pending',
+      retryCount: 0,
+      lastAttempt: null,
+      lastError: null
+    };
+    
+    return new Promise((resolve, reject) => {
+      const request = store.add(pendingData);
+      
+      request.onsuccess = () => {
+        console.log('[SW] Donnée ajoutée en attente de synchronisation:', request.result);
+        resolve(request.result);
+      };
+      
+      request.onerror = () => {
+        console.error('[SW] Erreur lors de l\'ajout des données:', request.error);
+        reject(request.error);
+      };
+    });
+  } catch (error) {
+    console.error('[SW] Erreur addPendingData:', error);
+    // Fallback vers localStorage
+    try {
+      const fallbackData = localStorage.getItem('sogara-pending-sync');
+      const existingData = fallbackData ? JSON.parse(fallbackData) : [];
+      const newData = {
+        id: Date.now(),
+        ...data,
+        timestamp: Date.now(),
+        status: 'pending',
+        retryCount: 0
+      };
+      existingData.push(newData);
+      localStorage.setItem('sogara-pending-sync', JSON.stringify(existingData));
+      console.log('[SW] Donnée ajoutée via fallback localStorage:', newData.id);
+      return newData.id;
+    } catch (fallbackError) {
+      console.error('[SW] Erreur fallback localStorage dans addPendingData:', fallbackError);
+      return null;
+    }
+  }
+}
+
+/**
+ * ✅ FONCTION ADDITIONNELLE : Mettre à jour le statut d'une donnée
+ * @param {string|number} dataId - ID de la donnée
+ * @param {string} status - Nouveau statut
+ * @param {string} error - Message d'erreur éventuel
+ * @returns Promise<boolean>
+ */
+async function updatePendingDataStatus(dataId, status, error = null) {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    return new Promise((resolve, reject) => {
+      const getRequest = store.get(dataId);
+      
+      getRequest.onsuccess = () => {
+        const data = getRequest.result;
+        if (data) {
+          data.status = status;
+          data.lastAttempt = Date.now();
+          if (error) {
+            data.lastError = error;
+            data.retryCount = (data.retryCount || 0) + 1;
+          }
+          
+          const updateRequest = store.put(data);
+          
+          updateRequest.onsuccess = () => {
+            console.log('[SW] Statut mis à jour:', dataId, status);
+            resolve(true);
+          };
+          
+          updateRequest.onerror = () => {
+            console.error('[SW] Erreur mise à jour:', updateRequest.error);
+            reject(updateRequest.error);
+          };
+        } else {
+          console.warn('[SW] Donnée non trouvée pour mise à jour:', dataId);
+          resolve(false);
+        }
+      };
+      
+      getRequest.onerror = () => {
+        console.error('[SW] Erreur récupération pour mise à jour:', getRequest.error);
+        reject(getRequest.error);
+      };
+    });
+  } catch (error) {
+    console.error('[SW] Erreur updatePendingDataStatus:', error);
+    return false;
+  }
+}
+
+/**
+ * ✅ FONCTION ADDITIONNELLE : Nettoyer les anciennes données
+ * @param {number} maxAgeMs - Âge maximum en millisecondes (défaut: 7 jours)
+ * @returns Promise<number> - Nombre d'éléments supprimés
+ */
+async function cleanupOldPendingData(maxAgeMs = 7 * 24 * 60 * 60 * 1000) {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const index = store.index('timestamp');
+    
+    const cutoffTime = Date.now() - maxAgeMs;
+    const range = IDBKeyRange.upperBound(cutoffTime);
+    
+    return new Promise((resolve, reject) => {
+      const request = index.openCursor(range);
+      let deletedCount = 0;
+      
+      request.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          store.delete(cursor.primaryKey);
+          deletedCount++;
+          cursor.continue();
+        } else {
+          console.log('[SW] Nettoyage terminé, données supprimées:', deletedCount);
+          resolve(deletedCount);
+        }
+      };
+      
+      request.onerror = () => {
+        console.error('[SW] Erreur lors du nettoyage:', request.error);
+        reject(request.error);
+      };
+    });
+  } catch (error) {
+    console.error('[SW] Erreur cleanupOldPendingData:', error);
+    return 0;
+  }
 }
 
 console.log('[SW] SOGARA Access Service Worker loaded');
