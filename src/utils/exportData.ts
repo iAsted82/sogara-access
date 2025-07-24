@@ -52,29 +52,46 @@ export function downloadCSV(data: any[], filename: string = 'export.csv'): void 
   document.body.removeChild(link);
 }
 
+// Importation des nouveaux services d'export
+import { exportDashboardData, ExportFormat } from '../services/ExportService';
+import { DashboardData } from '../types/export';
+
 /**
- * Prépare les données pour Excel (convertit en format CSV pour cette démo)
- * Dans une application réelle, on utiliserait une bibliothèque comme xlsx
+ * Exporte en format Excel avec le nouveau service
  * @param data Les données à convertir
  * @param filename Nom du fichier
  */
 export function downloadExcel(data: any[], filename: string = 'export.xlsx'): void {
-  // Pour cette démo, nous allons simplement utiliser CSV avec une extension différente
-  // Dans une application réelle, vous utiliseriez une bibliothèque comme xlsx
-  const csvContent = convertToCSV(data);
-  const blob = new Blob([csvContent], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
-  
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  
-  console.log('Téléchargement Excel', data);
+  const dashboardData: DashboardData = {
+    title: 'Export Excel SOGARA',
+    data: data,
+    metadata: {
+      generatedAt: new Date(),
+      totalRecords: data.length,
+      generatedBy: 'SOGARA Access System'
+    }
+  };
+
+  exportDashboardData(dashboardData, 'excel', {
+    filename: filename.replace('.xlsx', ''),
+    includeMetadata: true,
+    sheetName: 'Données SOGARA'
+  }).catch(error => {
+    console.error('Erreur téléchargement Excel:', error);
+    // Fallback vers l'ancienne méthode
+    const csvContent = convertToCSV(data);
+    const blob = new Blob([csvContent], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
 }
 
 /**
@@ -104,29 +121,53 @@ export function prepareChartData(data: any): any {
   };
 }
 
-/**
- * Prépare un rapport PDF (simulé pour cette démo)
- * @param data Données du rapport
- * @param options Options du rapport
- */
-export function preparePDFReport(data: any, options?: any): string {
-  // Dans une application réelle, vous utiliseriez une bibliothèque PDF
-  // Pour cette démo, nous simulons simplement la préparation des données
-  
-  const timestamp = new Date().toISOString();
-  const reportTitle = options?.title || 'Rapport de tableau de bord';
-  
-  const report = {
-    title: reportTitle,
-    timestamp,
-    data,
-    options
+// Fonction mise à jour pour utiliser le nouveau service PDF
+export function preparePDFReport(data: any, options?: any): void {
+  const dashboardData: DashboardData = {
+    title: options?.title || 'Rapport SOGARA Access',
+    description: options?.description,
+    data: data,
+    metadata: {
+      generatedAt: new Date(),
+      totalRecords: Array.isArray(data) ? data.length : Object.keys(data).length,
+      generatedBy: 'SOGARA Access System'
+    }
   };
-  
-  console.log('Préparation du rapport PDF', report);
-  return JSON.stringify(report, null, 2);
-}
 
+  exportDashboardData(dashboardData, 'pdf', {
+    filename: options?.filename || 'rapport_sogara',
+    includeMetadata: true,
+    pdfOptions: {
+      title: options?.title || 'Rapport SOGARA Access',
+      subtitle: options?.description,
+      orientation: options?.orientation || 'portrait',
+      watermark: 'SOGARA',
+      header: {
+        companyName: 'SOGARA - Société Gabonaise de Raffinage',
+        logo: '/Photoroom_20250703_164401.PNG',
+        address: 'Zone Industrielle d\'Oloumi Nord, Port-Gentil, Gabon'
+      },
+      footer: {
+        showPageNumbers: true,
+        text: 'Document confidentiel - Usage interne SOGARA'
+      }
+    }
+  }).catch(error => {
+    console.error('Erreur génération PDF:', error);
+    // Fallback vers l'ancienne méthode
+    const timestamp = new Date().toISOString();
+    const reportTitle = options?.title || 'Rapport de tableau de bord';
+    
+    const report = {
+      title: reportTitle,
+      timestamp,
+      data,
+      options
+    };
+    
+    console.log('Préparation du rapport PDF (fallback)', report);
+  });
+}
 /**
  * Prépare et exporte les données du tableau de bord
  * @param data Données à exporter
@@ -134,6 +175,43 @@ export function preparePDFReport(data: any, options?: any): string {
  * @param options Options d'export
  */
 export function exportDashboardData(data: any, format: 'csv' | 'excel' | 'pdf', options?: any): void {
+  // Utiliser le nouveau service d'export
+  const dashboardData: DashboardData = {
+    title: 'Export Tableau de Bord SOGARA',
+    description: 'Données exportées depuis le tableau de bord SOGARA Access',
+    data: data,
+    metadata: {
+      generatedAt: new Date(),
+      totalRecords: Array.isArray(data) ? data.length : Object.keys(data).length,
+      generatedBy: 'SOGARA Access System',
+      version: '2024.01.15'
+    }
+  };
+
+  // Utiliser le nouveau service d'export
+  import('../services/ExportService').then(({ exportDashboardData: newExportFunction }) => {
+    return newExportFunction(dashboardData, format as ExportFormat, {
+      filename: options?.filename || `sogara-dashboard-${new Date().toISOString().split('T')[0]}`,
+      includeMetadata: true,
+      dataTypes: options?.dataTypes || [],
+      pdfOptions: {
+        title: 'Rapport du Tableau de Bord SOGARA',
+        watermark: 'SOGARA',
+        header: {
+          companyName: 'SOGARA - Société Gabonaise de Raffinage',
+          logo: '/Photoroom_20250703_164401.PNG'
+        }
+      }
+    });
+  }).catch(error => {
+    console.error('Erreur export avec nouveau service, utilisation fallback:', error);
+    // Code original maintenu comme fallback
+    exportDashboardDataLegacy(data, format, options);
+  });
+}
+
+// Version legacy maintenue comme fallback
+function exportDashboardDataLegacy(data: any, format: 'csv' | 'excel' | 'pdf', options?: any): void {
   // Préparation du nom de fichier
   const date = new Date().toISOString().split('T')[0];
   const filename = options?.filename || `dgi-dashboard-${date}`;
@@ -186,14 +264,11 @@ export function exportDashboardData(data: any, format: 'csv' | 'excel' | 'pdf', 
       downloadExcel(formattedData, `${filename}.xlsx`);
       break;
     case 'pdf':
-      const pdfData = preparePDFReport(formattedData, {
+      preparePDFReport(formattedData, {
         title: 'Rapport du Tableau de Bord SOGARA',
+        filename: filename,
         ...options
       });
-      
-      // Pour une démo, nous affichons simplement une alerte
-      alert('Préparation du rapport PDF. Dans une application réelle, cela générerait un PDF téléchargeable.');
-      console.log(pdfData);
       break;
     default:
       console.error('Format d\'export non supporté:', format);

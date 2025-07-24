@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Download, FileSpreadsheet, FileText, CheckCircle, X } from 'lucide-react';
 
+import { exportDashboardData as newExportFunction, ExportFormat } from '../../services/ExportService';
+import { DashboardData } from '../../types/export';
+
 interface DataExportProps {
   onExport: (format: 'csv' | 'excel' | 'pdf', options?: any) => void;
   availableFormats?: ('csv' | 'excel' | 'pdf')[];
@@ -59,16 +62,43 @@ export const DataExport: React.FC<DataExportProps> = ({
       // Simuler une attente pour montrer le chargement
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Appeler la fonction d'export avec les options
-      onExport(selectedFormat, {
+      // Préparer les données pour le nouveau service
+      const dashboardData: DashboardData = {
+        title: 'Export Tableau de Bord SOGARA',
+        description: 'Données sélectionnées depuis le tableau de bord',
+        data: data || [],
+        metadata: {
+          generatedAt: new Date(),
+          totalRecords: data?.length || 0,
+          generatedBy: 'SOGARA Access System',
+          filters: options
+        }
+      };
+
+      // Utiliser le nouveau service d'export
+      await newExportFunction(dashboardData, selectedFormat as ExportFormat, {
+        filename: `sogara_export_${new Date().toISOString().split('T')[0]}`,
+        includeMetadata: true,
         dataTypes: selectedData,
-        timeRange: timeRange
+        pdfOptions: {
+          title: 'Export SOGARA Access',
+          watermark: 'SOGARA',
+          header: {
+            companyName: 'SOGARA - Société Gabonaise de Raffinage',
+            logo: '/Photoroom_20250703_164401.PNG'
+          }
+        }
       });
       
       // Fermer le modal après l'export
       onClose();
     } catch (error) {
       console.error('Erreur lors de l\'export:', error);
+      // Fallback vers l'ancienne méthode
+      onExport(selectedFormat, {
+        dataTypes: selectedData,
+        timeRange: timeRange
+      });
     } finally {
       setIsExporting(false);
     }
