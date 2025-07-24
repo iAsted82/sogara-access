@@ -45,6 +45,7 @@ import { BadgePreview } from '../ui/BadgePreview';
 import { generateBadgeNumber, generateQRCode } from '../../utils/badgeGenerator';
 import { useAuth } from '../../contexts/AuthContext';
 import { BadgeManagementModule } from './BadgeManagementModule';
+import { SimpleReceptionInterface } from '../reception/SimpleReceptionInterface';
 
 interface Visitor {
   id: string;
@@ -124,6 +125,7 @@ export const ReceptionModule: React.FC = () => {
     { id: 'ALT002', message: 'Temps d\'attente excessif - Guichet 3', level: 'info', time: '15 min' }
   ]);
   const [emergencyMode, setEmergencyMode] = useState(false);
+  const [useSimpleInterface, setUseSimpleInterface] = useState(false);
 
   // New state for visitor registration form
   const [visitorName, setVisitorName] = useState('');
@@ -473,6 +475,15 @@ export const ReceptionModule: React.FC = () => {
     setErrorMessage(alertMessages[type as keyof typeof alertMessages] || 'Alerte déclenchée!');
     setTimeout(() => setErrorMessage(''), 5000);
   };
+  
+  // Render simple interface for novice users
+  if (useSimpleInterface) {
+    return (
+      <SimpleReceptionInterface 
+        onBackToAdvanced={() => setUseSimpleInterface(false)}
+      />
+    );
+  }
   
   // UI sections
   const renderRegisterForm = () => (
@@ -1051,6 +1062,15 @@ export const ReceptionModule: React.FC = () => {
             <p className="text-blue-200">Système d'enregistrement et suivi des visiteurs</p>
           </div>
           
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setUseSimpleInterface(true)}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium"
+            >
+              <User className="h-5 w-5" />
+              Interface Simple
+            </button>
+          
           <div className="bg-white/10 backdrop-blur-md rounded-lg p-3 flex items-center gap-3">
             <div className="text-center">
               <div className="text-2xl font-bold">{visitors.filter(v => v.status === 'active').length}</div>
@@ -1066,6 +1086,7 @@ export const ReceptionModule: React.FC = () => {
               <div className="text-2xl font-bold">{activeBadges.length}</div>
               <div className="text-sm text-blue-200">Badges</div>
             </div>
+          </div>
           </div>
         </div>
       </div>
