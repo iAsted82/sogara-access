@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePWA } from '../../hooks/usePWA';
+import { OfflineDataManager } from '../../utils/pwaUtils';
 import InstallPrompt from './InstallPrompt';
 import UpdateNotification from './UpdateNotification';
 import OfflineIndicator from './OfflineIndicator';

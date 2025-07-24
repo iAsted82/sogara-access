@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { OfflineDataManager } from '../utils/pwaUtils';
 
 interface PWAInstallPrompt {
   prompt: () => Promise<void>;
