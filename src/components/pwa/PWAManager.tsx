@@ -153,7 +153,6 @@ export const PWAManager: React.FC<PWAManagerProps> = ({ children }) => {
     }
     
     // Initialiser les événements de synchronisation
-    OfflineDataManager.setupSyncEventListeners();
   }, []);
 
   return (
