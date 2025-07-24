@@ -694,6 +694,8 @@ export class OfflineDataManager {
       data: { action, error: error.message }
     });
   }
+
+  private static async processQueueItem(item: any): Promise<void> {
     switch (item.action) {
       case 'sync_visitor_data':
         await this.syncVisitorData(item.data);
@@ -1036,7 +1038,7 @@ export class PWANotifications {
       renotify: true,
       data: { progress }
     });
-  }</action>
+  }
 
   static async scheduleNotification(
     title: string,
