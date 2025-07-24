@@ -93,6 +93,24 @@ export const PWAManager: React.FC<PWAManagerProps> = ({ children }) => {
     }
   }, [capabilities, installPromptDismissed]);
 
+  // Configurer les écouteurs d'événements de synchronisation
+  const setupSyncEventListeners = () => {
+    // Écouter les succès de synchronisation
+    window.addEventListener('sogara:sync:success', (event: CustomEvent) => {
+      console.log('[PWA] Synchronisation réussie:', event.detail);
+    });
+
+    // Écouter les échecs de synchronisation
+    window.addEventListener('sogara:sync:failure', (event: CustomEvent) => {
+      console.error('[PWA] Synchronisation échouée:', event.detail);
+    });
+
+    // Écouter les clics sur notifications
+    window.addEventListener('notification:clicked', (event: CustomEvent) => {
+      console.log('[PWA] Notification cliquée:', event.detail);
+    });
+  };
+
   // Vérifier l'engagement utilisateur
   const shouldShowBasedOnEngagement = (): boolean => {
     const startTime = sessionStorage.getItem('sogara-session-start');
@@ -132,6 +150,9 @@ export const PWAManager: React.FC<PWAManagerProps> = ({ children }) => {
         setInstallPromptDismissed(false);
       }
     }
+    
+    // Initialiser les événements de synchronisation
+    this.setupSyncEventListeners();
   }, []);
 
   return (

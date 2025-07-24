@@ -289,6 +289,12 @@ export const useNetworkStatus = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       
+    
+    // Initialiser la communication avec le Service Worker
+    if (typeof OfflineDataManager !== 'undefined') {
+      OfflineDataManager.setupServiceWorkerCommunication();
+      OfflineDataManager.initialize();
+    }
       if ('connection' in navigator) {
         (navigator as any).connection.removeEventListener('change', handleConnectionChange);
       }
