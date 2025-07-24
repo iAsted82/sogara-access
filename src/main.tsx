@@ -4,22 +4,23 @@ import App from './App.tsx';
 import './index.css';
 
 // Enregistrement du Service Worker
-const isStackBlitz = window.location.hostname.includes('stackblitz') || 
-                    window.location.hostname.includes('webcontainer') ||
-                    window.location.hostname.includes('localhost');
+const isUnsupportedEnvironment = window.location.hostname.includes('stackblitz') || 
+                                 window.location.hostname.includes('webcontainer') ||
+                                 window.location.port === '5173' ||
+                                 window.location.hostname === 'localhost';
 
-if ('serviceWorker' in navigator && !isStackBlitz) {
+if ('serviceWorker' in navigator && !isUnsupportedEnvironment) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
       .then(registration => {
         console.log('✅ Service Worker registered successfully:', registration);
       })
       .catch(error => {
-        console.error('❌ Service Worker registration failed:', error);
+        console.log('ℹ️ Service Worker registration skipped:', error.message);
       });
   });
-} else if (isStackBlitz) {
-  console.log('🔧 Service Workers not supported in this environment, skipping registration');
+} else {
+  console.log('🔧 Service Worker registration skipped - unsupported environment or not available');
 }
 
 // Initialisation PWA
