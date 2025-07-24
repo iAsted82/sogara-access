@@ -1,0 +1,111 @@
+{
+  "name": "SOGARA Access - Gestion Intégrée",
+  "short_name": "SOGARA Access",
+  "description": "Plateforme de gestion opérationnelle de la raffinerie SOGARA - Société Gabonaise de Raffinage",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1e40af",
+  "background_color": "#f8fafc",
+  "scope": "/",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/Photoroom_20250703_164401.PNG",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/Photoroom_20250703_164401.PNG",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/Photoroom_20250703_164401.PNG",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "apple-touch-icon"
+    },
+    {
+      "src": "/Photoroom_20250703_164401.PNG",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/Photoroom_20250703_164401.PNG",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tableau de bord",
+      "short_name": "Dashboard",
+      "description": "Accès rapide au tableau de bord principal",
+      "url": "/#dashboard",
+      "icons": [
+        {
+          "src": "/Photoroom_20250703_164401.PNG",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Accueil Visiteurs",
+      "short_name": "Accueil",
+      "description": "Module d'accueil et enregistrement des visiteurs",
+      "url": "/#reception",
+      "icons": [
+        {
+          "src": "/Photoroom_20250703_164401.PNG",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Gestion Personnel",
+      "short_name": "Personnel",
+      "description": "Gestion du personnel et des équipes",
+      "url": "/#staff",
+      "icons": [
+        {
+          "src": "/Photoroom_20250703_164401.PNG",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/Photoroom_20250703_164401.PNG",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Vue d'ensemble du tableau de bord SOGARA Access"
+    },
+    {
+      "src": "/Photoroom_20250703_164401.PNG",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Interface mobile SOGARA Access"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+sogara",
+      "url": "/?action=%s"
+    }
+  ]
+}
