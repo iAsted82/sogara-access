@@ -135,6 +135,11 @@ export const usePWA = (): PWAHookReturn => {
     window.addEventListener('online', handleOnlineStatusChange);
     window.addEventListener('offline', handleOnlineStatusChange);
 
+    // Initialiser la communication avec le Service Worker
+    if (typeof OfflineDataManager !== 'undefined') {
+      OfflineDataManager.setupServiceWorkerCommunication();
+    }
+
     // Nettoyage
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);

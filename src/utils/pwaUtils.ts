@@ -277,6 +277,89 @@ export class OfflineDataManager {
     }
   }
 
+  /**
+   * Configurer la communication avec le Service Worker
+   */
+  static setupServiceWorkerCommunication(): void {
+    if (!('serviceWorker' in navigator)) return;
+    
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      const { type, key, itemId, data } = event.data;
+      
+      switch (type) {
+        case 'GET_OFFLINE_QUEUE':
+          this.handleGetOfflineQueue(event, key);
+          break;
+          
+        case 'REMOVE_FROM_OFFLINE_QUEUE':
+          this.handleRemoveFromQueue(event, key, itemId);
+          break;
+          
+        case 'UPDATE_OFFLINE_QUEUE':
+          this.handleUpdateQueue(event, key, data);
+          break;
+      }
+    });
+  }
+
+  private static handleGetOfflineQueue(event: MessageEvent, key: string): void {
+    try {
+      const queueData = localStorage.getItem(key);
+      const queue = queueData ? JSON.parse(queueData) : [];
+      
+      event.ports[0]?.postMessage({
+        success: true,
+        data: queue
+      });
+    } catch (error) {
+      console.error('[OfflineManager] Error getting queue:', error);
+      event.ports[0]?.postMessage({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  private static handleRemoveFromQueue(event: MessageEvent, key: string, itemId: string): void {
+    try {
+      const queueData = localStorage.getItem(key);
+      const queue = queueData ? JSON.parse(queueData) : [];
+      
+      const originalLength = queue.length;
+      const filteredQueue = queue.filter((item: any) => item.id !== itemId);
+      const removedCount = originalLength - filteredQueue.length;
+      
+      localStorage.setItem(key, JSON.stringify(filteredQueue));
+      
+      event.ports[0]?.postMessage({
+        success: true,
+        removedCount
+      });
+    } catch (error) {
+      console.error('[OfflineManager] Error removing from queue:', error);
+      event.ports[0]?.postMessage({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  private static handleUpdateQueue(event: MessageEvent, key: string, data: any[]): void {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      
+      event.ports[0]?.postMessage({
+        success: true
+      });
+    } catch (error) {
+      console.error('[OfflineManager] Error updating queue:', error);
+      event.ports[0]?.postMessage({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
   static async clearQueue(): Promise<void> {
     localStorage.removeItem(this.OFFLINE_QUEUE_KEY);
   }
