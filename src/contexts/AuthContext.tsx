@@ -75,7 +75,7 @@ export const useAuth = () => {
 
 // Profils complets des collaborateurs DGDI
 const userProfiles = {
-  'admin@dgdi.ga': {
+  'admin': {
     id: 'admin-001',
     firstName: 'Robert',
     lastName: 'NDONG MÉGNE',
@@ -87,7 +87,7 @@ const userProfiles = {
     securityLevel: 'maximum' as const,
     permissions: ['all_permissions', 'system_admin', 'user_management', 'security_config']
   },
-  'recep@dgdi.ga': {
+  'recep': {
     id: 'recep-001',
     role: 'RECEP' as const,
     department: 'Accueil et Orientation',
@@ -153,12 +153,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Vérifier que l'email existe dans les profils actifs
-      if (email !== 'admin@dgdi.ga' && email !== 'recep@dgdi.ga') {
+      if (email !== 'admin' && email !== 'recep') {
         throw new Error('Compte désactivé ou non autorisé');
       }
 
       // Récupérer le profil utilisateur
-      const profile = userProfiles[email as 'admin@dgdi.ga' | 'recep@dgdi.ga'];
+      const profile = userProfiles[email as 'admin' | 'recep'];
       if (!profile) {
         throw new Error('Compte non trouvé dans le système');
       }

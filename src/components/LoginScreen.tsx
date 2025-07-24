@@ -49,7 +49,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBackToHome }) => {
   // Comptes prioritaires (actifs)
   const activeAccounts = [
     { 
-      email: 'admin@sogara.ga', 
+      email: 'admin', 
       role: 'Administrateur Système', 
       name: 'Robert NDONG',
       icon: '🔧', 
@@ -58,7 +58,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBackToHome }) => {
       priority: 1
     },
     { 
-      email: 'recep@sogara.ga', 
+      email: 'recep', 
       role: 'Réceptionniste Principal', 
       name: 'Sylvie MBOUMBA',
       icon: '🎯', 
